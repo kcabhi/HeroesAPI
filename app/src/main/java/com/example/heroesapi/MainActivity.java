@@ -17,21 +17,30 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import Api.Heroes;
 import URL.url;
+import model.ImageResponse;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.http.Url;
 
 public class MainActivity extends AppCompatActivity {
 
     private EditText etName, etDesc;
     private Button btnSave;
     private ImageView img;
-    String imagePath;
+    String imagePath, imageName;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,11 +74,31 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-//    private void StrictMode(){
-//        android.os.StrictMode.ThreadPolicy threadPolicy = new android.os.StrictMode.ThreadPolicy.Builder().permitAll().build();
-//        android.os.StrictMode.setThreadPolicy(threadPolicy);
-//
-//    }
+    private void StrictMode() {
+        android.os.StrictMode.ThreadPolicy threadPolicy = new android.os.StrictMode.ThreadPolicy.Builder().permitAll().build();
+        android.os.StrictMode.setThreadPolicy(threadPolicy);
+
+    }
+
+    private void SaveImageOnly() {
+        File file = new File(imagePath);
+
+        RequestBody requestBody = RequestBody.create(MediaType.parse("multipart/form-dat"), file);
+        MultipartBody.Part body = MultipartBody.Part.createFormData("imageFile", file.getName(), requestBody);
+
+        Heroes heroes = url.getInstance().create(Heroes.class);
+        Call<ImageResponse> responseBodyCall = heroes.uploadImage(body);
+        StrictMode();
+        try {
+            Response<ImageResponse> imageResponseResponse = responseBodyCall.execute();
+            imageName = imageResponseResponse.body().getFilename();
+        } catch (IOException e) {
+            Toast.makeText(this, "Error", Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        }
+
+    }
+
 
 //    private void loadFormURL() {
 //
@@ -88,20 +117,17 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void Save() {
-
-
+        SaveImageOnly();
         String name = etName.getText().toString();
         String desc = etDesc.getText().toString();
+        Map<String,String> map = new HashMap<>();
+        map.put("name",name);
+        map.put("desc",desc);
+        map.put("image",imageName);
 
+        Heroes heroes = url.getInstance().create(Heroes.class);
 
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(url.BASE_URL)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-
-        Heroes api = retrofit.create(Heroes.class);
-
-        Call<Void> heroesCall = api.addHero(name, desc);
+        Call<Void> heroesCall = heroes.addHero(name, desc);
 
         heroesCall.enqueue(new Callback<Void>() {
             @Override
@@ -119,6 +145,11 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(MainActivity.this, "Error", Toast.LENGTH_SHORT).show();
             }
         });
+
+        Intent intent = new Intent(this,HeroesActivity.class);
+        startActivity(intent);
+        finish();
+
     }
 
     private void BrowseImage() {
@@ -145,8 +176,8 @@ public class MainActivity extends AppCompatActivity {
 
     private String getRealPathFromUri(Uri uri) {
 
-        String[] projection ={MediaStore.Images.Media.DATA};
-        CursorLoader loader = new CursorLoader(getApplicationContext(),uri,projection,null,null,null);
+        String[] projection = {MediaStore.Images.Media.DATA};
+        CursorLoader loader = new CursorLoader(getApplicationContext(), uri, projection, null, null, null);
         Cursor cursor = loader.loadInBackground();
         int colIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
         cursor.moveToFirst();
@@ -157,13 +188,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void previewImage(String imagePath) {
         File imgfile = new File(imagePath);
-        if (imgfile.exists()){
+        if (imgfile.exists()) {
             Bitmap myBitmap = BitmapFactory.decodeFile(imgfile.getAbsolutePath());
             img.setImageBitmap(myBitmap);
         }
 
     }
-
 
 
 }
