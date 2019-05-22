@@ -60,9 +60,9 @@ public class MainActivity extends AppCompatActivity {
 
         StrictMode();
         try {
-            String imgURL ="";
+            String imgURL ="https://softwarica.edu.np/wp-content/uploads/2019/02/Kiran-Rana.jpg";
             URL url = new URL(imgURL);
-            img.setImageBitmap(BitmapFactory.decodeStream(InputStream)url.getContent());
+            img.setImageBitmap(BitmapFactory.decodeStream((InputStream)url.getContent()));
 
 
         }
